@@ -1,127 +1,139 @@
 import streamlit as st
+import plotly.graph_objects as go
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
-st.set_page_config(page_title="UAV CG & Weight Calculator", layout="wide")
+st.set_page_config(page_title="UAV CG Analyzer", layout="wide")
+st.title("🛩️ UAV Weight and Center of Gravity Analyzer")
 
-st.title("🛩️ UAV Weight and CG Estimator")
-
-# --- Material Selection ---
-materials = {
-    "Carbon Fiber": 1600,  # kg/m^3
+# Material densities in kg/m^3
+material_densities = {
+    "Foam": 30,
+    "Balsa Wood": 160,
+    "Carbon Fiber": 1600,
     "Aluminum": 2700,
-    "Foam": 100,
-    "Plastic": 1200
+    "Titanium": 4500
 }
 
-selected_material = st.selectbox("Select Structural Material", list(materials.keys()))
-density_structure = materials[selected_material]  # in kg/m^3
+# Select material
+material = st.selectbox("Select Material for Structural Components:", list(material_densities.keys()))
+density = material_densities[material]
 
-st.markdown("---")
+# UAV Dimensions (meters)
+fuselage_length = 1.0
+fuselage_diameter = 0.2
+wing_area = 0.5
+wing_AR = 6
+wing_span = np.sqrt(wing_area * wing_AR)
+wing_chord = wing_area / wing_span
 
-# --- UAV Dimensions ---
-Sw = 0.5     # Wing area (m^2)
-AR = 6       # Wing aspect ratio
-lambda_w = 0.7
+ht_area = 0.1
+ht_AR = 4
+ht_span = np.sqrt(ht_area * ht_AR)
+ht_chord = ht_area / ht_span
 
-Sht = 0.1    # Horizontal tail area (m^2)
-ARht = 4     # Horizontal tail aspect ratio
-lambda_ht = 0.5
+vt_area = 0.05
+vt_AR = 3
+vt_height = np.sqrt(vt_area * vt_AR)
+vt_chord = vt_area / vt_height
 
-Svt = 0.05   # Vertical tail area (m^2)
-ARvt = 3     # Vertical tail aspect ratio
-lambda_vt = 0.6
+# Structural Volume Approximations
+fuselage_volume = np.pi * (fuselage_diameter / 2)**2 * fuselage_length
+wing_volume = wing_area * 0.01  # Thin airfoil assumption
+vt_volume = vt_area * 0.01
 
-Lf = 1.0     # Fuselage length (m)
-Df = 0.2     # Fuselage diameter (m)
+# Structural Masses (kg)
+fuselage_mass = fuselage_volume * density
+wing_mass = wing_volume * density
+vt_mass = vt_volume * density
 
-# --- Component Weights ---
-components = {
-    "Camera": 125,
-    "LiDAR Sensor": 50,
-    "GPS Module": 76,
-    "Communication Module": 50,
-    "Battery": 559
-}
+# Payload Components (weights in grams)
+payload = [
+    {"name": "Camera", "weight": 125},
+    {"name": "LiDAR", "weight": 50},
+    {"name": "GPS", "weight": 76},
+    {"name": "Comms", "weight": 50},
+    {"name": "Battery", "weight": 559},
+]
 
-# --- Component Placement Sliders ---
-st.sidebar.title("📦 Component Placement (m)")
-component_positions = {}
-for name in components:
-    x = st.sidebar.slider(f"{name} - x", 0.0, Lf, 0.5, step=0.01)
-    y = st.sidebar.slider(f"{name} - y", -0.3, 0.3, 0.0, step=0.01)
-    z = st.sidebar.slider(f"{name} - z", -0.3, 0.3, 0.0, step=0.01)
-    component_positions[name] = {"x": x, "y": y, "z": z}
+st.subheader("🔧 Adjust Component Positions (in meters)")
 
-# --- Structural Weight Calculations ---
-wing_span = np.sqrt(Sw * AR)
-wing_volume = Sw * 0.02  # Assume 2 cm thickness
-wing_weight = density_structure * wing_volume
+for comp in payload:
+    col1, col2, col3 = st.columns(3)
+    comp['x'] = col1.slider(f"{comp['name']} - X", 0.0, fuselage_length, 0.5, 0.01)
+    comp['y'] = col2.slider(f"{comp['name']} - Y", -0.5, 0.5, 0.0, 0.01)
+    comp['z'] = col3.slider(f"{comp['name']} - Z", 0.0, 0.5, 0.0, 0.01)
+    comp['weight_kg'] = comp['weight'] / 1000
 
-ht_span = np.sqrt(Sht * ARht)
-ht_volume = Sht * 0.015
-ht_weight = density_structure * ht_volume
+# Add structural components to total list
+components = payload + [
+    {"name": "Wing", "weight_kg": wing_mass, "x": fuselage_length / 2, "y": 0, "z": 0},
+    {"name": "Fuselage", "weight_kg": fuselage_mass, "x": fuselage_length / 2, "y": 0, "z": 0},
+    {"name": "Vertical Tail", "weight_kg": vt_mass, "x": fuselage_length * 0.9, "y": 0, "z": vt_height / 2}
+]
 
-vt_height = np.sqrt(Svt * ARvt)
-vt_volume = Svt * 0.015
-vt_weight = density_structure * vt_volume
+# CG Calculation
+W_total = sum(c['weight_kg'] for c in components)
+cg_x = sum(c['x'] * c['weight_kg'] for c in components) / W_total
+cg_y = sum(c['y'] * c['weight_kg'] for c in components) / W_total
+cg_z = sum(c['z'] * c['weight_kg'] for c in components) / W_total
 
-fuselage_volume = np.pi * (Df/2)**2 * Lf
-fuselage_weight = density_structure * fuselage_volume
+st.markdown(f"### 📍 Total Weight: **{W_total:.2f} kg**")
+st.markdown(f"### 🎯 Center of Gravity (CG): **({cg_x:.2f}, {cg_y:.2f}, {cg_z:.2f}) m**")
 
-# --- Structural Component Positions ---
-structure_components = {
-    "Wing": {"weight": wing_weight * 1000, "x": 0.5, "y": 0.0, "z": 0.0},
-    "Fuselage": {"weight": fuselage_weight * 1000, "x": 0.5, "y": 0.0, "z": 0.0},
-    "Vertical Tail": {"weight": vt_weight * 1000, "x": 0.95, "y": 0.0, "z": 0.2},
-    "Horizontal Tail": {"weight": ht_weight * 1000, "x": 0.95, "y": 0.0, "z": 0.1},
-}
+# 3D Visualization
+fig = go.Figure()
 
-# --- Total Components ---
-all_components = {}
-all_components.update(structure_components)
-for name, weight in components.items():
-    all_components[name] = {
-        "weight": weight,
-        "x": component_positions[name]["x"],
-        "y": component_positions[name]["y"],
-        "z": component_positions[name]["z"]
-    }
+for comp in components:
+    fig.add_trace(go.Scatter3d(
+        x=[comp['x']], y=[comp['y']], z=[comp['z']],
+        mode='markers+text',
+        marker=dict(size=5, color='royalblue'),
+        text=[comp['name']],
+        textposition="top center",
+        name=comp['name']
+    ))
 
-# --- CG Calculation ---
-total_weight = sum(comp["weight"] for comp in all_components.values())
-Xcg = sum(comp["weight"] * comp["x"] for comp in all_components.values()) / total_weight
-Ycg = sum(comp["weight"] * comp["y"] for comp in all_components.values()) / total_weight
-Zcg = sum(comp["weight"] * comp["z"] for comp in all_components.values()) / total_weight
+fig.add_trace(go.Scatter3d(
+    x=[cg_x], y=[cg_y], z=[cg_z],
+    mode='markers+text',
+    marker=dict(size=6, color='red', symbol='x'),
+    text=["CG"],
+    textposition="bottom center",
+    name="CG"
+))
 
-# --- Display Results ---
-st.subheader("📊 Results")
-st.write(f"**Total Weight:** {total_weight:.2f} g")
-st.write(f"**Center of Gravity (CG):** X = {Xcg:.2f} m, Y = {Ycg:.2f} m, Z = {Zcg:.2f} m")
+fig.add_trace(go.Scatter3d(
+    x=[0, fuselage_length], y=[0, 0], z=[0, 0],
+    mode='lines', line=dict(color='black', width=2), name="Fuselage"
+))
+fig.add_trace(go.Scatter3d(
+    x=[fuselage_length / 2 - wing_span / 2, fuselage_length / 2 + wing_span / 2],
+    y=[0, 0], z=[0, 0],
+    mode='lines', line=dict(color='green', width=2), name="Wing"
+))
+fig.add_trace(go.Scatter3d(
+    x=[fuselage_length * 0.9, fuselage_length * 0.9],
+    y=[-ht_span / 2, ht_span / 2], z=[0, 0],
+    mode='lines', line=dict(color='orange', width=2), name="Horizontal Tail"
+))
+fig.add_trace(go.Scatter3d(
+    x=[fuselage_length * 0.9, fuselage_length * 0.9],
+    y=[0, 0], z=[0, vt_height],
+    mode='lines', line=dict(color='purple', width=2), name="Vertical Tail"
+))
 
-# --- 3D Visualization ---
-st.subheader("🧭 CG Location (3D View)")
-fig = plt.figure(figsize=(10, 6))
-ax = fig.add_subplot(111, projection='3d')
+fig.update_layout(
+    title="UAV Component Placement & CG",
+    scene=dict(
+        xaxis_title='X (m)',
+        yaxis_title='Y (m)',
+        zaxis_title='Z (m)',
+        aspectmode='data',
+        bgcolor='white'
+    ),
+    width=800,
+    height=600,
+    margin=dict(l=0, r=0, b=0, t=40)
+)
 
-# Plot components
-for name, comp in all_components.items():
-    ax.scatter(comp["x"], comp["y"], comp["z"], label=name, s=comp["weight"] / 5, alpha=0.7)
-
-# Plot CG
-ax.scatter(Xcg, Ycg, Zcg, color='red', s=100, label="CG", marker='x')
-
-# UAV Sketch
-ax.plot([0.25, 0.75], [0, 0], [0, 0], 'black', lw=2)  # Wing
-ax.plot([0.5, 0.5], [0, 0], [-0.1, 0.1], 'blue', lw=4)  # Fuselage (side view)
-ax.plot([0.95, 0.95], [-ht_span/2, ht_span/2], [0.1, 0.1], 'green', lw=2)  # Horizontal tail
-ax.plot([0.95, 0.95], [0, 0], [0.1, 0.3], 'purple', lw=2)  # Vertical tail
-
-ax.set_xlabel("X (m)")
-ax.set_ylabel("Y (m)")
-ax.set_zlabel("Z (m)")
-ax.set_title("UAV Structure & CG")
-ax.legend()
-
-st.pyplot(fig)
+st.plotly_chart(fig, use_container_width=True)
