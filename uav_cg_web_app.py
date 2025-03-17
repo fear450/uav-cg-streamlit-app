@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 
 # Set page configuration
-st.set_page_config(page_title="UAV CG Analyzer", layout="wide")
-st.title("🛩️ UAV Weight and Center of Gravity Analyzer")
+st.set_page_config(page_title="CG Analyzer", layout="wide")
+st.title("🛩️Weight and Center of Gravity Analyzer")
 
 # ================== User Input Section for Weight Calculations ==================
 st.sidebar.header("⚖️ Weight Calculation Parameters")
@@ -21,8 +21,8 @@ wing_AR = st.sidebar.number_input("Wing Aspect Ratio", value=6.0, format="%.10f"
 wing_chord = st.sidebar.number_input("Wing Chord (m)", value=0.5, format="%.10f", help="Mean aerodynamic chord of the wing.")
 t_c_max = st.sidebar.number_input("Max Thickness/Chord Ratio", value=0.12, format="%.10f", help="Maximum thickness-to-chord ratio of the wing.")
 Lambda_0_25 = st.sidebar.number_input("Quarter-Chord Sweep Angle (degrees)", value=0.0, format="%.10f", help="Sweep angle at the quarter-chord line.")
-lambda_ratio = st.sidebar.number_input("Wing Taper Ratio", value=1.0, format="%.10f", help="Ratio of tip chord to root chord.")
-K_rho = st.sidebar.number_input("Material Density Factor (K_rho)", value=1.0, format="%.10f", help="Factor accounting for material density variations.")
+lambda_ratio = st.sidebar.number_input("Wing Taper Ratio", value=0.7, format="%.10f", help="Ratio of tip chord to root chord.")
+K_rho = st.sidebar.number_input("Material Density Factor (K_rho)", value=0.001, format="%.10f", help="Factor accounting for material density variations.")
 
 # Fuselage parameters
 fuselage_length = st.sidebar.number_input("Fuselage Length (m)", value=1.0, format="%.10f", help="Total length of the fuselage.")
@@ -84,13 +84,13 @@ def calculate_vertical_tail_weight():
 # ================== Initialize Components ==================
 if "components" not in st.session_state:
     st.session_state.components = [
-        {"name": "Camera", "weight": 125, "x": 0.2, "y": 0, "z": 0.1, "weight_kg": 0.125},
-        {"name": "LiDAR", "weight": 50, "x": 0.3, "y": 0, "z": 0.2, "weight_kg": 0.050},
-        {"name": "GPS", "weight": 76, "x": 0.4, "y": 0, "z": 0.3, "weight_kg": 0.076},
-        {"name": "Comms", "weight": 50, "x": 0.5, "y": 0, "z": 0.4, "weight_kg": 0.050},
-        {"name": "Battery", "weight": 559, "x": 0.7, "y": 0, "z": 0.5, "weight_kg": 0.559},
+        {"name": "Camera", "weight": 125, "x": 0.2, "y": 0, "z": 0.75, "weight_kg": 0.125},
+        {"name": "LiDAR", "weight": 50, "x": 0.3, "y": 0, "z": 0.75, "weight_kg": 0.050},
+        {"name": "GPS", "weight": 76, "x": 0.4, "y": 0, "z": 0.75, "weight_kg": 0.076},
+        {"name": "Comms", "weight": 50, "x": 0.5, "y": 0, "z": 0.75, "weight_kg": 0.050},
+        {"name": "Battery", "weight": 559, "x": 0.7, "y": 0, "z": 0.75, "weight_kg": 0.559},
         {"name": "Wing", "weight": 0, "x": 0.5, "y": 0, "z": 0.5, "weight_kg": 0},  # Placeholder
-        {"name": "Fuselage", "weight": 0, "x": 0.5, "y": 0, "z": 0, "weight_kg": 0},  # Placeholder
+        {"name": "Fuselage", "weight": 0, "x": 0.5, "y": 0, "z": 0.5, "weight_kg": 0},  # Placeholder
         {"name": "Horizontal Tail", "weight": 0, "x": 0.5, "y": 0, "z": 0, "weight_kg": 0},  # Placeholder
         {"name": "Vertical Tail", "weight": 0, "x": 0.5, "y": 0, "z": 0, "weight_kg": 0},  # Placeholder
     ]
