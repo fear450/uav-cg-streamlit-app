@@ -6,12 +6,12 @@ import pandas as pd
 # Set page configuration
 st.set_page_config(page_title="CG Analyzer", layout="wide")
 st.title("🛩️Weight and Center of Gravity Analyzer")
-
+st.sidebar.header("Made by Falah Alshamsi - 202001762")
 # ================== User Input Section for Weight Calculations ==================
 st.sidebar.header("⚖️ Weight Calculation Parameters")
 
 # Material properties
-rho_mat = st.sidebar.number_input("Material Density (kg/m³)", value=2700.0, format="%.10f", help="Density of the material used (e.g., aluminum = 2700 kg/m³).")
+rho_mat = st.sidebar.number_input("Material Density (kg/m³)", value=300.0, format="%.10f", help="Density of the material used (e.g., aluminum = 2700 kg/m³).")
 # Load factor
 n_ult = st.sidebar.number_input("Ultimate Load Factor (n_ult)", value=3.8, format="%.10f", help="Maximum load factor the UAV can withstand.")
 
@@ -22,12 +22,13 @@ wing_chord = st.sidebar.number_input("Wing Chord (m)", value=0.5, format="%.10f"
 t_c_max = st.sidebar.number_input("Max Thickness/Chord Ratio", value=0.12, format="%.10f", help="Maximum thickness-to-chord ratio of the wing.")
 Lambda_0_25 = st.sidebar.number_input("Quarter-Chord Sweep Angle (degrees)", value=0.0, format="%.10f", help="Sweep angle at the quarter-chord line.")
 lambda_ratio = st.sidebar.number_input("Wing Taper Ratio", value=0.7, format="%.10f", help="Ratio of tip chord to root chord.")
-K_rho = st.sidebar.number_input("Material Density Factor (K_rho)", value=0.001, format="%.10f", help="Factor accounting for material density variations.")
+K_rho_wing = st.sidebar.number_input("Wing Density Factor (K_rho_wing)", value=0.001, help="Density factor for the wing.")
 
 # Fuselage parameters
 fuselage_length = st.sidebar.number_input("Fuselage Length (m)", value=1.0, format="%.10f", help="Total length of the fuselage.")
 fuselage_diameter = st.sidebar.number_input("Fuselage Diameter (m)", value=0.2, format="%.10f", help="Maximum diameter of the fuselage.")
 K_inlet = st.sidebar.number_input("Inlet Factor (K_inlet)", value=1.0, format="%.10f", help="Factor accounting for inlet design.")
+K_rho_fuselage = st.sidebar.number_input("Fuselage Density Factor (K_rho_fuselage)", value=0.001, help="Density factor for the fuselage.")
 
 # Horizontal Tail parameters
 ht_area = st.sidebar.number_input("Horizontal Tail Area (m²)", value=0.1, format="%.10f", help="Planform area of the horizontal tail.")
@@ -36,6 +37,7 @@ ht_chord = st.sidebar.number_input("Horizontal Tail Chord (m)", value=0.1, forma
 ht_t_c_max = st.sidebar.number_input("Horizontal Tail Max Thickness/Chord Ratio", value=0.12, format="%.10f", help="Maximum thickness-to-chord ratio of the horizontal tail.")
 ht_Lambda_0_25 = st.sidebar.number_input("Horizontal Tail Quarter-Chord Sweep Angle (degrees)", value=0.0, format="%.10f", help="Sweep angle at the quarter-chord line of the horizontal tail.")
 ht_lambda_ratio = st.sidebar.number_input("Horizontal Tail Taper Ratio", value=1.0, format="%.10f", help="Taper ratio of the horizontal tail.")
+K_rho_ht = st.sidebar.number_input("Horizontal Tail Density Factor (K_rho_ht)", value=0.0001, help="Density factor for the horizontal tail.")
 
 # Vertical Tail parameters
 vt_area = st.sidebar.number_input("Vertical Tail Area (m²)", value=0.05, format="%.10f", help="Planform area of the vertical tail.")
@@ -47,28 +49,28 @@ vt_lambda_ratio = st.sidebar.number_input("Vertical Tail Taper Ratio", value=1.0
 V_v = st.sidebar.number_input("Vertical Tail Volume Coefficient", value=0.2, format="%.10f", help="Volume coefficient of the vertical tail.")
 C_T = st.sidebar.number_input("Tail Cone Coefficient (C_T)", value=1.0, format="%.10f", help="Coefficient for the tail cone design.")
 C_V = st.sidebar.number_input("Vertical Tail Coefficient (C_V)", value=1.0, format="%.10f", help="Coefficient for the vertical tail design.")
-
+K_rho_vt = st.sidebar.number_input("Vertical Tail Density Factor (K_rho_vt)", value=0.0001, help="Density factor for the vertical tail.")
 
 # Gravity
 g = 9.81  # Gravity constant
 # ================== Weight Calculation Functions ==================
 def calculate_wing_weight():
     return (
-        wing_area * wing_chord * t_c_max * rho_mat * K_rho * 
+        wing_area * wing_chord * t_c_max * rho_mat * K_rho_wing * 
         ((wing_AR * n_ult) / np.cos(np.radians(Lambda_0_25))) ** 0.6 * 
         lambda_ratio ** 0.04 * g
     )
 
 def calculate_fuselage_weight():
     return (
-        fuselage_length * fuselage_diameter ** 2 * rho_mat * K_rho *
-        n_ult ** 0.25 * K_inlet * g
+        fuselage_length * fuselage_diameter ** 2 * rho_mat * K_rho_fuselage *
+        n_ult ** 0.25 * K_inlet * 8
     )
 
 
 def calculate_horizontal_tail_weight():
     return (
-        ht_area * ht_chord * ht_t_c_max * rho_mat * K_rho *
+        ht_area * ht_chord * ht_t_c_max * rho_mat * K_rho_ht *
         ((ht_AR / np.cos(np.radians(ht_Lambda_0_25))) ** 0.6 *
         ht_lambda_ratio ** 0.04 * g
     )
@@ -76,7 +78,7 @@ def calculate_horizontal_tail_weight():
 
 def calculate_vertical_tail_weight():
     return (
-        vt_area * vt_chord * vt_t_c_max * rho_mat * K_rho *
+        vt_area * vt_chord * vt_t_c_max * rho_mat * K_rho_vt *
         ((vt_AR / np.cos(np.radians(vt_Lambda_0_25))) ** 0.6 *
         vt_lambda_ratio ** 0.04 * V_v ** 0.2 * (C_T / C_V) ** 0.4 * g
     )
